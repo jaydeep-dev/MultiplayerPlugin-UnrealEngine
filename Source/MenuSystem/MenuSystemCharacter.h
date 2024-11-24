@@ -84,10 +84,12 @@ protected:
 
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 	void OnFindSessionsComplete(bool bWasSuccessful);
+	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 
 private:
-	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
-	FOnFindSessionsCompleteDelegate FindSessionsCompleteDelegate;
-	TSharedPtr<FOnlineSessionSearch> SessionSearch;
+	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;		// Delegate for callback function after the session is successfully created
+	FOnFindSessionsCompleteDelegate FindSessionsCompleteDelegate;		// Delegate for callback function after the sessions are found
+	TSharedPtr<FOnlineSessionSearch> SessionSearch;						// global access variable for sessions search
+	FOnJoinSessionCompleteDelegate JoinSessionCompleteDelegate;			// Delegate for callback function after the session is successfully joined
 };
 

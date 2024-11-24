@@ -22,7 +22,8 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 AMenuSystemCharacter::AMenuSystemCharacter():
 	CreateSessionCompleteDelegate(FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete)), // Delegate Creation & Binding
-	FindSessionsCompleteDelegate(FOnFindSessionsCompleteDelegate::CreateUObject(this, &ThisClass::OnFindSessionsComplete))
+	FindSessionsCompleteDelegate(FOnFindSessionsCompleteDelegate::CreateUObject(this, &ThisClass::OnFindSessionsComplete)),
+	JoinSessionCompleteDelegate(FOnJoinSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnJoinSessionComplete))
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -105,12 +106,13 @@ void AMenuSystemCharacter::CreateGameSession()
 
 	// Create session settings and the session itself
 	TSharedPtr<FOnlineSessionSettings> SessionSettings = MakeShareable(new FOnlineSessionSettings());
-	SessionSettings->bIsLANMatch = false;
-	SessionSettings->NumPublicConnections = 4;
-	SessionSettings->bAllowJoinInProgress = true;
-	SessionSettings->bAllowJoinViaPresence = true;
-	SessionSettings->bShouldAdvertise = true;
-	SessionSettings->bUsesPresence = true;
+	SessionSettings->bIsLANMatch = false; // We are making online session (NOT LAN Session)
+	SessionSettings->NumPublicConnections = 4; // Max Players
+	SessionSettings->bAllowJoinInProgress = true; // Can you join the game after it has started?
+	SessionSettings->bAllowJoinViaPresence = true; // Can players join using PRESENCE?
+	SessionSettings->bShouldAdvertise = true; // Is session is allowed to broadcast? (is it public session?)
+	SessionSettings->bUsesPresence = true; // Is the session is using PRESENCE?
+	SessionSettings->Set(FName("MatchType"), FString("FreeForAll"), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing); // The session is of specific type? if yes what type of session is this? (rn its type: MatchType and FreeForAll as value)
 
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	OnlineSessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettings);
@@ -166,10 +168,18 @@ void AMenuSystemCharacter::OnCreateSessionComplete(FName SessionName, bool bWasS
 
 void AMenuSystemCharacter::OnFindSessionsComplete(bool bWasSuccessful)
 {
+	if (!OnlineSessionInterface.IsValid())
+	{
+		return;
+	}
+
 	for (auto Result : SessionSearch->SearchResults)
 	{
 		FString Id = Result.GetSessionIdStr();
 		auto User = Result.Session.OwningUserName; // auto is equivalant to var in C#
+
+		FString MatchType;
+		Result.Session.SessionSettings.Get(FName("MatchType"), MatchType);
 
 		if (GEngine)
 		{
@@ -179,6 +189,52 @@ void AMenuSystemCharacter::OnFindSessionsComplete(bool bWasSuccessful)
 				FColor::Cyan,
 				FString::Printf(TEXT("Id: %s, User: %s"), *Id, *User) // * is the pointer to the starting of the string which means it will print the whole string form start (its not like we can just pass the FString as it is since its a class however a pointer is valid since its a String Class and pointer to strings are valid (LOL, its CPP-> it doesn't make sense to me!!))
 			);
+		}
+
+		if (MatchType == FString("FreeForAll"))
+		{
+			if (GEngine)
+			{
+				GEngine->AddOnScreenDebugMessage(
+					-1,
+					15.0f,
+					FColor::Cyan,
+					FString::Printf(TEXT("Joining Session: %s"), *MatchType) // * is the pointer to the starting of the string which means it will print the whole string form start (its not like we can just pass the FString as it is since its a class however a pointer is valid since its a String Class and pointer to strings are valid (LOL, its CPP-> it doesn't make sense to me!!))
+				);
+			}
+
+			OnlineSessionInterface->AddOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegate);
+
+			ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+			OnlineSessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, Result);
+		}
+	}
+}
+
+void AMenuSystemCharacter::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
+{
+	if (!OnlineSessionInterface.IsValid())
+	{
+		return;
+	}
+
+	FString Address;
+	if (OnlineSessionInterface->GetResolvedConnectString(NAME_GameSession, Address))
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				15.0f,
+				FColor::Yellow,
+				FString::Printf(TEXT("Connect String: %s"), *Address) // * is the pointer to the starting of the string which means it will print the whole string form start (its not like we can just pass the FString as it is since its a class however a pointer is valid since its a String Class and pointer to strings are valid (LOL, its CPP-> it doesn't make sense to me!!))
+			);
+		}
+
+		APlayerController* PlayerController = GetGameInstance()->GetFirstLocalPlayerController();
+		if (PlayerController)
+		{
+			PlayerController->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
 		}
 	}
 }
