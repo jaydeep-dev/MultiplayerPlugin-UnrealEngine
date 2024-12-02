@@ -8,6 +8,10 @@
 
 #include "MultiplayerSessionsSubsystem.generated.h"
 
+// Our own delegates for UI classes to refer to when callbacks from OnlineSubSystem occurs
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnCreateSessionComplete, bool, bWasSuccessful);
+
+
 /**
  * 
  */
@@ -26,6 +30,10 @@ public:
 	void JoinSession(const FOnlineSessionSearchResult& SessionResult);
 	void DestroySession();
 	void StartSession();
+
+	// Our Own custom delegates for UI class
+	FMultiplayerOnCreateSessionComplete MultiplayerOnCreateSessionComplete;
+
 protected:
 
 	// Internal callback functions used by the delegates.
@@ -38,6 +46,7 @@ protected:
 
 private:
 	IOnlineSessionPtr SessionInterface;
+	TSharedPtr<FOnlineSessionSettings> LastSessionSettings;
 
 	// List of delegates for our internal callback functions.
 	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
