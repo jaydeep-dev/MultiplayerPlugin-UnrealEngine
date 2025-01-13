@@ -10,6 +10,10 @@
 
 // Our own delegates for UI classes to refer to when callbacks from OnlineSubSystem occurs
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnCreateSessionComplete, bool, bWasSuccessful);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FMultiplayerOnFindSessionsComplete, const TArray<FOnlineSessionSearchResult>& SearchResults, bool bWasSuccessful);
+DECLARE_MULTICAST_DELEGATE_OneParam(FMultiplayerOnJoinSessionComplete, EOnJoinSessionCompleteResult::Type Result);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnDestroySessionComplete, bool, bWasSuccessful);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnStartSessionComplete, bool, bWasSuccessful);
 
 
 /**
@@ -33,6 +37,10 @@ public:
 
 	// Our Own custom delegates for UI class
 	FMultiplayerOnCreateSessionComplete MultiplayerOnCreateSessionComplete;
+	FMultiplayerOnFindSessionsComplete MultiplayerOnFindSessionsComplete;
+	FMultiplayerOnJoinSessionComplete MultiplayerOnJoinSessionComplete;
+	FMultiplayerOnDestroySessionComplete MultiplayerOnDestroySessionComplete;
+	FMultiplayerOnStartSessionComplete MultiplayerOnStartSessionComplete;
 
 protected:
 
@@ -47,6 +55,7 @@ protected:
 private:
 	IOnlineSessionPtr SessionInterface;
 	TSharedPtr<FOnlineSessionSettings> LastSessionSettings;
+	TSharedPtr<FOnlineSessionSearch> LastSessionSearch;
 
 	// List of delegates for our internal callback functions.
 	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
@@ -63,5 +72,9 @@ private:
 
 	FOnStartSessionCompleteDelegate StartSessionCompleteDelegate;
 	FDelegateHandle StartSessionCompleteDelegateHandle;
+
+	bool bCreateSessionOnDestroy{ false };
+	int32 LastNumConnections;
+	FString LastMatchType;
 
 };
